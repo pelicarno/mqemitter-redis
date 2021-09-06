@@ -86,7 +86,7 @@ function MQEmitterRedis (opts) {
   this._opts.regexWildcardSome = new RegExp((this._opts.matchEmptyLevels ? this._opts.separator.replace(/([/,!\\^${}[\]().*+?|<>\-&])/g, '\\$&') + '?' : '') + this._opts.wildcardSome.replace(/([/,!\\^${}[\]().*+?|<>\-&])/g, '\\$&'), 'g')
 
   if (typeof this._opts.bypassRedis !== 'function') {
-    this._opts.bypassRedis = null;
+    this._opts.bypassRedis = null
   }
 }
 
@@ -174,8 +174,8 @@ MQEmitterRedis.prototype.emit = function (msg, done) {
       this._emit(packet.msg)
     }
     this._cache.set(packet.id, true)
-    done();
-    return;
+    done()
+    return
   }
 
   this._pipeline.publish(msg.topic, msgpack.encode(packet)).then(() => done()).catch(done)
