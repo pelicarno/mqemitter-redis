@@ -1,4 +1,4 @@
-mqemitter-redis&nbsp;&nbsp;[![Build Status](https://travis-ci.org/mcollina/mqemitter-redis.png)](https://travis-ci.org/mcollina/mqemitter-redis)
+mqemitter-redis&nbsp;&nbsp;![ci](https://github.com/mcollina/mqemitter/workflows/ci/badge.svg)
 ===============
 
 Redis-powered [MQEmitter](http://github.com/mcollina/mqemitter).
@@ -41,6 +41,16 @@ mq.on('hello world', function (message, cb) {
 // topic is mandatory
 mq.emit(msg, function () {
   // emitter will never return an error
+})
+```
+
+Connection String Example
+-------------------------
+
+```js
+var redis = require('mqemitter-redis')
+var mq = redis({
+  connectionString: 'redis://:authpassword@127.0.0.1:6380/4'
 })
 ```
 
