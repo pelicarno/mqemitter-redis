@@ -18,8 +18,8 @@ function MQEmitterRedis (opts) {
 
   this._opts = opts
 
-  this.subConn = new Redis(opts)
-  this.pubConn = new Redis(opts)
+  this.subConn = new Redis(opts.connectionString || opts)
+  this.pubConn = new Redis(opts.connectionString || opts)
 
   this._pipeline = Pipeline(this.pubConn)
 
@@ -27,7 +27,7 @@ function MQEmitterRedis (opts) {
 
   this._cache = new LRU({
     max: 10000,
-    maxAge: 60 * 1000 // one minute
+    ttl: 60 * 1000 // one minute
   })
 
   this.state = new EE()
@@ -166,7 +166,7 @@ MQEmitterRedis.prototype.emit = function (msg, done) {
 
   const packet = {
     id: hyperid(),
-    msg: msg
+    msg
   }
 
   if (this._opts.bypassRedis !== null && this._opts.bypassRedis(msg.topic, msg.payload)) {
@@ -215,3 +215,31 @@ MQEmitterRedis.prototype._containsWildcard = function (topic) {
 function noop () {}
 
 module.exports = MQEmitterRedis
+
+function MQEmitterRedisPrefix (pubSubPrefix, options) {
+  MQEmitterRedis.call(this, options)
+  this._pubSubPrefix = pubSubPrefix
+  this._sym_proxiedCallback = Symbol('proxiedCallback')
+}
+inherits(MQEmitterRedisPrefix, MQEmitterRedis)
+MQEmitterRedisPrefix.prototype.on = function (topic, cb, done) {
+  const t = this._pubSubPrefix + topic
+  cb[this._sym_proxiedCallback] = function (packet, cbcb) {
+    const t = packet.topic.slice(this._pubSubPrefix.length)
+    const p = { ...packet, topic: t }
+    return cb.call(this, p, cbcb)
+  }.bind(this)
+  return MQEmitterRedis.prototype.on.call(this, t, cb[this._sym_proxiedCallback], done)
+}
+MQEmitterRedisPrefix.prototype.removeListener = function (topic, func, done) {
+  const t = this._pubSubPrefix + topic
+  const f = func[this._sym_proxiedCallback]
+  return MQEmitterRedis.prototype.removeListener.call(this, t, f, done)
+}
+MQEmitterRedisPrefix.prototype.emit = function (packet, done) {
+  const t = this._pubSubPrefix + packet.topic
+  const p = { ...packet, topic: t }
+  return MQEmitterRedis.prototype.emit.call(this, p, done)
+}
+
+module.exports.MQEmitterRedisPrefix = MQEmitterRedisPrefix
