@@ -71,7 +71,10 @@ function MQEmitterRedis (opts) {
   })
 
   this.subConn.on('error', function (err) {
-    that._onError(err)
+    // redis can retry to make a connection
+    if (err.code !== 'ECONNREFUSED') {
+      that._onError(err)
+    }
   })
 
   this.pubConn.on('connect', function () {
@@ -79,7 +82,10 @@ function MQEmitterRedis (opts) {
   })
 
   this.pubConn.on('error', function (err) {
-    that._onError(err)
+    // redis can retry to make a connection
+    if (err.code !== 'ECONNREFUSED') {
+      that._onError(err)
+    }
   })
 
   MQEmitter.call(this, opts)
@@ -160,6 +166,11 @@ MQEmitterRedis.prototype.emit = function (msg, done) {
   if (this.closed) {
     const err = new Error('mqemitter-redis is closed')
     return done(err)
+  }
+
+  // deliver to local listeners only, without publishing to Redis
+  if (this._opts.bypassRedis && this._opts.bypassRedis(msg.topic, msg.payload)) {
+    return this._emit(msg, done)
   }
 
   const packet = {
